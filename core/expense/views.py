@@ -1,85 +1,107 @@
 from django.shortcuts import render
-from .models import Transactions
+from django.db.models import Sum
 from rest_framework.response import Response
-from .serializers import TransactionSerializer
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
-from django.db.models import Sum
+from rest_framework import status
+from .models import Transactions
+from .serializers import TransactionSerializer
 
-@api_view("GET")
+
+# Function-Based View
+@api_view(["GET"])
 def get_transactions(request):
     queryset = Transactions.objects.all()
     serializer = TransactionSerializer(queryset, many=True)
     
     return Response({
-        "data":serializer.data,
+        "data": serializer.data,
         "total": queryset.aggregate(total=Sum('amount'))['total'] or 0
     })
-    
+
+
+# Class-Based View
 class TransactionAPI(APIView):
     def get(self, request):
+        print("Hiii")
         queryset = Transactions.objects.all()
         serializer = TransactionSerializer(queryset, many=True)
         
         return Response({
-            "data":serializer.data,
+            "data": serializer.data,
             "total": queryset.aggregate(total=Sum('amount'))['total'] or 0
         })
-        
+
     def post(self, request):
         data = request.data
-        print(data)
         serializer = TransactionSerializer(data=data)
+        
         if not serializer.is_valid():
             return Response({
-                "message" : "data not saved",
-                "errors":serializer.errors,
-            })
+                "message": "Data not saved",
+                "errors": serializer.errors,
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         serializer.save()
         return Response({
-            "message" : "data saved",
-            "data":serializer.data
-        })
-        
+            "message": "Data saved",
+            "data": serializer.data,
+        }, status=status.HTTP_201_CREATED)
+
     def put(self, request):
         return Response({
-            "message" : "this is a put method"
+            "message": "This is a PUT method",
         })
-        
+
     def patch(self, request):
         data = request.data
+        transaction_id = data.get('id')
         
-        if not data.get('id'):
+        if not transaction_id:
             return Response({
-                "message" : "data not updated",
-                "errors":"id is required"
-            })
-        transactions = Transactions.objects.get(id=id)
-        serializer = TransactionSerializer(instance=transactions, data=data, partial=True)
+                "message": "Data not updated",
+                "errors": "ID is required",
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            transaction = Transactions.objects.get(id=transaction_id)
+        except Transactions.DoesNotExist:
+            return Response({
+                "message": "Transaction not found",
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = TransactionSerializer(instance=transaction, data=data, partial=True)
+        
         if not serializer.is_valid():
             return Response({
-                "message" : "data not saved",
-                "errors":serializer.errors,
-            })
+                "message": "Data not saved",
+                "errors": serializer.errors,
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         serializer.save()
         return Response({
-            "message" : "data saved",
-            "data":serializer.data
+            "message": "Data updated",
+            "data": serializer.data,
         })
-       
+
     def delete(self, request):
         data = request.data
-        if not data.get('id'):
+        transaction_id = data.get('id')
+        
+        if not transaction_id:
             return Response({
-                "message" : "data not deleted",
-                "errors":"id is required"
-            })
+                "message": "Data not deleted",
+                "errors": "ID is required",
+            }, status=status.HTTP_400_BAD_REQUEST)
         
-        transaction = Transactions.objects.get(id=data.get('id')).delete()
+        try:
+            transaction = Transactions.objects.get(id=transaction_id)
+        except Transactions.DoesNotExist:
+            return Response({
+                "message": "Transaction not found",
+            }, status=status.HTTP_404_NOT_FOUND)
         
-        return  Response({
-            "message" : "data deleted",
-            "data":{}
-        })
+        transaction.delete()
+        return Response({
+            "message": "Data deleted",
+        }, status=status.HTTP_204_NO_CONTENT)
