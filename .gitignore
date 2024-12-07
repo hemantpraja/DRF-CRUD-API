@@ -1,0 +1,26 @@
+# Byte-compiled files
+*.pyc
+*.pyo
+__pycache__/
+
+
+# Django-specific files
+db.sqlite3
+*.log
+*.pot
+*.py[co]
+local_settings.py
+
+# Virtual environment
+venv/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.DS_Store
+
+# Migrations (optional, if you regenerate migrations frequently)
+migrations/
+
+# Other system files
+.DS_Store
